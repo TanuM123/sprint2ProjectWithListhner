@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<error-handler name="GlobalErrorHandler" doc:id="948a130d-1f9e-4d4f-b15d-8105b200fea1" >
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="463724da-e3c0-4d8b-b23e-34d0d374d836" type="ANY">
+			<choice doc:name="Choice" doc:id="8e80a9b6-b60b-4b58-862d-869c4eb1cfb7" >
+				<when expression='#[error.errorType.namespace=="APIKIT"]'>
+					<choice doc:name="Choice" doc:id="d591c84d-5959-4853-9356-7b5495eff9b3" >
+						<when expression='#[error.errorType.identifier=="BAD REQUEST"]'>
+							<set-variable value="400" doc:name="HttpStatusResponse" doc:id="0ecea7ae-9f05-439c-802f-76ffbb147c89" variableName="httpStatus"/>
+						</when>
+						<when expression='#[error.errorType.identifier=="NOT FOUND"]'>
+							<set-variable value="404" doc:name="Http Status Response" doc:id="f26a9bea-0d58-4baa-aa66-063ff798d4ff" variableName="httpStatus"/>
+						</when>
+						<when expression='#[error.errorType.identifier=="METHOD_NOT_ALLOWED"]'>
+							<set-variable value="405" doc:name="Http Status Response" doc:id="a581ddd2-a761-4675-bb16-539650cf6e13" variableName="httpStatus"/>
+						</when>
+						<when expression='#[error.errorType.identifier=="NOT_ACCEPTABLE"]'>
+							<set-variable value="406" doc:name="Http Status Response" doc:id="163c5001-4e7f-4ea0-8377-5e988b64278a" variableName="httpStatus"/>
+						</when>
+						<when expression='#[error.errorType.identifier=="UNSUPPORTED_MEDIA_TYPE"]'>
+							<set-variable value="406" doc:name="Http Status Response" doc:id="cc5847e4-5575-4697-92f2-ad9a7cadfc16" variableName="httpStatus"/>
+						</when>
+						<otherwise>
+							<set-variable value="500" doc:name="Http Status Response" doc:id="0178c3ab-85e9-4a9e-960a-a8cf7df5744a" variableName="httpStatus"/>
+						</otherwise>
+					</choice>
+				</when>
+			</choice>
+			<logger level="INFO" doc:name="Logger" doc:id="0ab6018c-a6af-4d38-92e2-e358c6f6b478" message="#[vars.httpStatus]"/>
+			<flow-ref doc:name="Flow Reference" doc:id="d71b28ed-16d1-4b37-bb3e-90435f1aac1d" name="Generate_Error_Response"/>
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="b46fb769-73ab-4012-85e4-c4465943b481" type="HTTP:NOT_FOUND">
+			<set-variable value="404" doc:name="Http Status Response" doc:id="bac1880f-b460-4249-a59f-491ec3600be9" variableName="httpStatus"/>
+			<flow-ref doc:name="Flow Reference" doc:id="26026063-3547-4a8e-98bc-24a0773af73c" name="Generate_Error_Response"/>
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="cb1fc7f6-268b-40ca-96fa-a0564a0ddb4e" type="HTTP:BAD_REQUEST">
+			<set-variable value="400" doc:name="Http Status Response" doc:id="7793f21d-d380-48d9-9f7c-e845e9cc22d5" variableName="httpStatus"/>
+			<flow-ref doc:name="Flow Reference" doc:id="15161ebd-6ef8-48f9-bf5f-e326c2513487" name="Generate_Error_Response"/>
+		</on-error-propagate>
+	</error-handler>
+	<flow name="Generate_Error_Response" doc:id="fc03e5ba-0fe9-47ae-916d-e48a50171e28" >
+		<ee:transform doc:name="Transform Message" doc:id="c88df194-16fa-45d6-9ac0-e8b59db878d1" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"code":vars.httpStatus,
+	"type":error.errorType.identifier,
+	"message":error.description
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="10011f96-b6b1-43f1-b682-e062fc5ad507" message='#[payload ++ {"status":"ERROR"}]'/>
+	</flow>
+</mule>

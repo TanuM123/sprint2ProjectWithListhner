@@ -1,0 +1,99 @@
+#%RAML 1.0
+title: SprintcustAPI
+description: "This is the API Specification for Sprint Project"
+baseUri: sprint-api
+
+/addmysqltoSalesforce:
+  get:
+    responses:
+      200:
+        body:
+          application/json:
+            example:
+              {
+                "message":"Data Added in Salesforce",
+                "status":"OK"
+              }
+      500:
+        body:
+          application/json:
+            example:
+              {
+                "message":"Data Not Added",
+                "status":"Internal Server Error"
+              }
+
+/addSalesforcetomysql:
+  get:
+    responses:
+      200:
+        body:
+          application/json:
+            example:
+              {
+                "message":"Data Added in MYSQL",
+                "status":"OK"
+              }
+      500:
+        body:
+          application/json:
+            example:
+              {
+                "message":"Data Not Added",
+                "status":"Internal Server Error"
+              }
+/getallmysql:
+  get:
+    responses:
+      200:
+        body:
+          application/json:
+            example:
+              {
+              "message":"Data Added",
+              "status":"OK"
+              }
+      400:
+        body:
+          application/json:
+            example:
+              {
+                "message":"Something went wrong.",
+                "status":"Url not found"
+              }
+      500:
+        body:
+          application/json:
+            example:
+              {
+                "message":"Data Not Added",
+                "status":"Internal server error"
+              }
+/getallsalesforce:
+  get:
+    responses:
+      200:
+        body:
+          application/json:
+            example:
+              {
+              "message":"Data Added",
+              "status":"OK"
+              }
+      400:
+        body:
+          application/json:
+            example:
+              {
+                "message":"Something went wrong.",
+                "status":"Url not found"
+              }
+      500:
+        body:
+          application/json:
+            example:
+              {
+                "message":"Data Not Added",
+                "status":"Internal server error"
+              }
+             

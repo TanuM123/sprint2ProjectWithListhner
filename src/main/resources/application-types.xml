@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<types:mule xmlns:types="http://www.mulesoft.org/schema/mule/types">
+  <types:catalog>
+    <types:type name="table" format="java">
+      <types:shape format="raml"><![CDATA[#%RAML 1.0 DataType
+type: string]]></types:shape>
+    </types:type>
+    <types:type name="outputjson" format="json">
+      <types:shape format="weave" example="examples/output.json"><![CDATA[%dw 2.0
+
+type outputjson = Array<{|  prod_id: Number {"typeId": "int"},   prod_name: String,   prod_price: Number {"typeId": "int"},   prod_type: String,   lastmodified: String|}> {"example": "[{\\\"prod_id\\\":1241,\\\"prod_name\\\":\\\"qwer\\\",\\\"prod_price\\\":1252,\\\"prod_type\\\":\\\"oooo\\\",\\\"lastmodified\\\":\\\"2021-03-07 20:16:09\\\"},{\\\"prod_id\\\":1241,\\\"prod_name\\\":\\\"qwer\\\",\\\"prod_price\\\":1252,\\\"prod_type\\\":\\\"oooo\\\",\\\"lastmodified\\\":\\\"2021-03-07 20:16:09\\\"}]"}
+
+]]></types:shape>
+    </types:type>
+  </types:catalog>
+  <types:enrichment select="#a61d1561-0ef8-4977-8441-bc92a9cefae2">
+    <types:processor-declaration>
+      <types:output-event>
+        <types:message>
+          <types:payload type="outputjson"/>
+        </types:message>
+      </types:output-event>
+    </types:processor-declaration>
+  </types:enrichment>
+</types:mule>

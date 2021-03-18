@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
+	<configuration-properties doc:name="Configuration properties" doc:id="71cd00ac-3775-48ee-a8b4-c6e5c6fe1164" file="dev-all.properties" />
+	<db:config name="Database_Config1" doc:name="Database Config" doc:id="f5422a03-abec-4116-a7d0-998338ec8d7e" >
+		<db:my-sql-connection host="${db.host}" port="${db.port}" user="${db.user}" password="${db.password}" database="${db.database}" />
+	</db:config>
+	<os:object-store name="Object_store" doc:name="Object store" doc:id="a38b2176-0ff3-4903-86a7-eee2fd6f8226" />
+	<db:config name="Database_Config2" doc:name="Database Config" doc:id="ca5a830a-9e54-4050-95d0-f9047a330fbf" >
+		<db:my-sql-connection host="${db.host}" port="${db.port}" user="${db.user}" password="${db.password}" database="${db.database}" />
+	</db:config>
+	<os:object-store name="Object_store1" doc:name="Object store" doc:id="1840c7bf-23ba-4940-907e-bfa6b3081a38" />
+	<configuration-properties doc:name="Configuration properties" doc:id="4ea8045e-7e6b-4cb9-8118-fc865c06a08f" file="dev-sales.properties" />
+	<flow name="get:\addmysqltoSalesforce:sprintcustapi-config" doc:id="7c6174d5-2826-4ac1-b742-a8287cd3f4cb" >
+		<os:retrieve doc:name="Retrieve" doc:id="042af786-f06f-4dbf-8e4a-772a3af13693" key="lastModifiedDate" objectStore="Object_store1" target="lastModifiedDate">
+			<os:default-value ><![CDATA[2021-03-05 12:56:43.000Z]]></os:default-value>
+		</os:retrieve>
+		<logger level="INFO" doc:name="Logger" doc:id="2724228b-716f-4db7-844c-b659129d8dbd" message="#[vars.lastModifiedDate]"/>
+		<db:select doc:name="Select" doc:id="e6f997b9-0709-4eaf-97e9-f2d3397e1eb4" config-ref="Database_Config2">
+			<db:sql ><![CDATA[select prod_id,prod_name,prod_price,prod_type,last_modified,prod_city,prod_state,prod_country,shipping_city,shipping_state from product_api
+where last_modified>:timedata]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	"timedata":vars.lastModifiedDate
+}]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="Choice" doc:id="7432939b-f349-482c-80a8-f07aaee7279d" >
+			<when expression="#[not isEmpty(payload)]">
+				<os:store doc:name="Store" doc:id="2e0dc725-4812-4f24-b628-ccd954ec9a07" key="lastModifiedDate" objectStore="Object_store1" >
+					<os:value ><![CDATA[#[max(payload map $.last_modified)]]]></os:value>
+				</os:store>
+				<ee:transform doc:name="Transform Message" doc:id="a12de766-243f-4bac-9730-4503d837271f">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload map(payload01, index) -> {
+	Name: payload01.prod_name,
+	BillingCity: payload01.prod_city,
+	BillingState: payload01.prod_state,
+	BillingCountry: payload01.prod_country,
+	ShippingCity: payload01.shipping_city,
+	ShippingState: payload01.shipping_state,
+	AccountNumber: payload01.prod_id as String,
+	Industry: payload01.prod_type,
+	AnnualRevenue: payload01.prod_price as String,
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<salesforce:create type="Account" doc:name="Create" doc:id="ca49451c-ff9a-4732-a487-b453721fdd8d" config-ref="Salesforce_Config"/>
+				<ee:transform doc:name="Copy_of_Transform Message" doc:id="64985fd1-18b5-444b-a1d5-52619aebb1ad" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  message: "Data Added in Salesforce",
+  status: "OK"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="7e21cc88-c536-4373-9f20-5b7e9bd66b9a" message="data added to salesforce"/>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Transform Message" doc:id="d755ebd6-a001-46ac-a45e-404273c4fe18" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"msg":"no new data found",
+	"status":payload.successful
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	</flow>
+</mule>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+	<flow name="get:\getallsalesforce:sprintcustapi-config" doc:id="8320abba-018d-4355-a917-f140700fb840" >
+		<set-variable value="2021-03-07T10:16:32.000Z" doc:name="Set Variable" doc:id="e2aa6c3d-65c1-4818-9470-643de79dd2e4" variableName="time"/>
+		<salesforce:query doc:name="Query" doc:id="a2af1a8a-22ef-475b-bcf4-cee9a9d6a96d" config-ref="Salesforce_Config">
+			<salesforce:salesforce-query ><![CDATA[SELECT AccountNumber,AnnualRevenue,LastModifiedDate,Name,Phone,BillingCity,BillingCountry,BillingState,ShippingCity,ShippingCountry,ShippingState FROM Account WHERE LastModifiedDate>:mytime ]]></salesforce:salesforce-query>
+			<salesforce:parameters ><![CDATA[#[{
+	"mytime":vars.time
+}]]]></salesforce:parameters>
+		</salesforce:query>
+		<ee:transform doc:name="Transform Message" doc:id="d30ab327-9395-4811-baa5-a0beff0c0054" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>

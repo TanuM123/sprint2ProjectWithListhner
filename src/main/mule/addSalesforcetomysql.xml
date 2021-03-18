@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd">
+	<db:config name="Database_Config3" doc:name="Database Config" doc:id="c23ff7aa-5a92-4336-ac38-377c25dc6d4b" >
+		<db:my-sql-connection host="${db.host}" port="${db.port}" user="${db.user}" password="${db.password}" database="${db.database}" />
+	</db:config>
+	<os:object-store name="Object_store2" doc:name="Object store" doc:id="b58c50aa-649d-4362-a228-78da9b11d631" />
+	<configuration-properties doc:name="Configuration properties" doc:id="151db5bb-0849-477e-8f37-af64af3c4bc6" file="dev-sales.properties" />
+	<salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="fd7a759a-7778-4f21-853d-9a61d89c9940" >
+		<salesforce:basic-connection username="${sfdc.username}" password="${sfdc.password}" securityToken="${sfdc.securityToken}" />
+	</salesforce:sfdc-config>
+	<db:config name="Database_Config4" doc:name="Database Config" doc:id="5855190d-e4e3-4d5d-aa81-6b5b0595ccfd" >
+		<db:my-sql-connection host="${db.host}" port="${db.port}" user="${db.user}" password="${db.password}" database="${db.database}" />
+	</db:config>
+	<db:config name="Database_Config5" doc:name="Database Config" doc:id="c2022596-5752-4d41-b7bc-da61fb6e8c57" >
+		<db:my-sql-connection host="${db.host}" port="${db.port}" user="${db.user}" password="${db.password}" database="${db.database}" />
+	</db:config>
+	<flow name="get:\addSalesforcetomysql:sprintcustapi-config" doc:id="8dda10c0-ebb3-4612-b558-ed35d475c37c" >
+		<os:retrieve doc:name="Retrieve" doc:id="8d92574f-4afc-4ae5-a4fa-76f01fd62dec" key="time_update" target="time_update" objectStore="Object_store2">
+			<os:default-value ><![CDATA[2021-03-05T08:22:21.000Z]]></os:default-value>
+		</os:retrieve>
+		<logger level="INFO" doc:name="Logger" doc:id="e0a0c064-9f13-4cb8-b0b6-a7ef19eecd08" message="#[vars.time_update]"/>
+		<salesforce:query doc:name="Query" doc:id="c621c8c0-527c-4438-8d02-652cb5ec5435" config-ref="Salesforce_Config">
+					<salesforce:salesforce-query><![CDATA[SELECT AccountNumber,Name,Industry,AnnualRevenue,LastModifiedDate,BillingCity,BillingState,BillingCountry,ShippingCity,ShippingState
+FROM Account WHERE LastModifiedDate >:mydata]]></salesforce:salesforce-query>
+					<salesforce:parameters><![CDATA[#[{
+	"mydata":vars.time_update
+}]]]></salesforce:parameters>
+				</salesforce:query>
+		<choice doc:name="Choice" doc:id="098e691c-3096-4e6e-baa8-813c2b03fcb4" >
+			<when expression="#[not isEmpty(payload)]">
+				<os:store doc:name="Store" doc:id="68473118-505f-4af3-a132-6eb99f297d32" key="time_update" objectStore="Object_store2">
+					<os:value><![CDATA[#[max(payload map $.LastModifiedDate)]]]></os:value>
+				</os:store>
+				<logger level="INFO" doc:name="Logger" doc:id="fe917833-cdd2-43e2-a3e7-c40d04caee09" message="#[payload]"/>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger" doc:id="acd28fc2-5a4f-4a70-b599-a56b022c03fe" message="add salesforce to mysql payload is empty"/>
+			</otherwise>
+		</choice>
+		<batch:job jobName="addSalesforcetomysqlBatch_Job" doc:id="0f7f133d-e8db-4ac1-87a8-b0170fb28371" >
+			<batch:process-records >
+				<batch:step name="Batch_Step" doc:id="d0fd90a5-2900-4b4f-b9dc-f0b3c1847f3d" >
+					<ee:transform doc:name="Transform Message" doc:id="a61d1561-0ef8-4977-8441-bc92a9cefae2">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+{
+	prod_id: payload.AccountNumber as Number ,
+	prod_name: payload.Name default "",
+	prod_price: payload.AnnualRevenue as Number,
+	prod_type: payload.Industry default "",
+	lastmodified: payload.LastModifiedDate as DateTime,
+	prod_city: payload.BillingCity,
+	prod_state: payload.BillingState,
+	prod_country: payload.BillingCountry,
+	shipping_city: payload.ShippingCity,
+	shipping_state: payload.ShippingState
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+					<db:insert doc:name="Insert" doc:id="ee9e5c31-02a2-4d6b-ab74-0df2f187e1bc" config-ref="Database_Config5">
+						<db:sql ><![CDATA[INSERT INTO product_api VALUES(:p_id,:p_name,:p_price,:p_type,:last_modified,:p_city,:p_state,:p_country,:s_city,:s_state)]]></db:sql>
+						<db:input-parameters ><![CDATA[#[{
+	"p_id":payload.prod_id,
+	"p_name":payload.prod_name,
+	"p_price":payload.prod_price,
+	"p_type":payload.prod_type,
+	"last_modified":payload.lastmodified,
+	"p_city":payload.prod_city,
+	"p_state":payload.prod_state,
+	"p_country":payload.prod_country,
+	"s_city":payload.shipping_city,
+	"s_state":payload.shipping_state
+}]]]></db:input-parameters>
+					</db:insert>
+				</batch:step>
+			</batch:process-records>
+			<batch:on-complete >
+				<logger level="INFO" doc:name="Logger" doc:id="f8d0336c-f52b-47ed-8231-ee4fddf49216" message="data added in database"/>
+			</batch:on-complete>
+		</batch:job>
+		<ee:transform doc:name="Copy_of_Transform Message" doc:id="3a5d2546-0cd6-481a-8a52-16449b5bc5e3" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  message: "Data Added in MYSQL",
+  status: "OK"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
